@@ -1,123 +1,57 @@
 #include "data.h"
+#include "input.h"
+#include "output.h"
 #include "terminal.h"
 #include "append_buffer.h"
+#include "row_operations.h"
 
-#define KILO_VERSION "0.0.1"
-#define CTRL_KEY(k) ((k) & 0x1f)
+extern struct editorConfig E;
 
-// input
-void editorMoveCursor(int key) {
-    switch (key) {
-        case ARROW_LEFT:
-            if (E.cx != 0) E.cx--;
-            break;
-        case ARROW_RIGHT:
-            if (E.cx != E.screencols - 1) E.cx++;
-            break;
-        case ARROW_UP:
-            if (E.cy != 0) E.cy--;
-            break;
-        case ARROW_DOWN:
-            if (E.cy != E.screenrows - 1) E.cy++;
-            break;
-        default:
-            break;
+// file i/o
+void editorOpen(char *filename) {
+    free(E.filename);
+    E.filename = strdup(filename);
+
+    FILE *fp = fopen(filename, "r");
+    if (!fp) die("fopen");
+
+    char *line = NULL;
+    size_t linecap = 0;
+    ssize_t linelen;
+    while ((linelen = getline(&line, &linecap, fp)) != -1) {
+        while (linelen > 0 && (line[linelen - 1] == '\n' ||
+                               line[linelen - 1] == '\r' ))
+            linelen--;
+        editorAppendRow(line, linelen);
     }
-}
-
-void editorProcessKeypress() {
-    int c = editorReadKey();
-
-    switch (c) {
-    case CTRL_KEY('q'):
-        write(STDOUT_FILENO, "\x1b[2J", 4);
-        write(STDOUT_FILENO, "\x1b[H", 3);
-        exit(0);
-        break;
-
-    case HOME_KEY:
-        E.cx = 0;
-        break;
-    case END_KEY:
-        E.cx = E.screencols - 1;
-        break;
-
-    case PAGE_UP:
-    case PAGE_DOWN:
-        {   
-            // code block with that pair of braces so that we’re allowed to declare the times variable
-            int times = E.screenrows;
-            while (times--)
-                editorMoveCursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN);
-        }
-        break;
-
-    case ARROW_UP:
-    case ARROW_DOWN:
-    case ARROW_LEFT:
-    case ARROW_RIGHT:
-        editorMoveCursor(c);
-        break;
-    default:
-        break;
-    }
-}
-
-// output
-void editorDrawRows(struct abuf *ab) {
-    int y;
-    for (y = 0; y < E.screenrows; y++) {
-        // Shows welcome message
-        if (y == E.screenrows / 3) {
-            char welcome[80];
-            int welcomelen = snprintf(welcome, sizeof(welcome), 
-                "Kilo editor -- version %s", KILO_VERSION);
-            if (welcomelen > E.screencols) welcomelen = E.screencols;
-            int padding = (E.screencols - welcomelen) / 2;
-            if (padding) {
-                abAppend(ab, "~", 1);
-                --padding;
-            }
-            while (padding--) abAppend(ab, " ", 1);
-            abAppend(ab, welcome, welcomelen);
-        } else {
-            abAppend(ab, "~", 1);
-        }
-
-        abAppend(ab, "\x1b[K", 3);
-        if (y < E.screenrows - 1) 
-            abAppend(ab, "\r\n", 2);
-    }
-}
-
-void editorRefreshScreen() {
-    struct abuf ab = ABUF_INIT;
-
-    abAppend(&ab, "\x1b[?25l", 6); // hide cursor
-    abAppend(&ab, "\x1b[H", 3);
-
-    editorDrawRows(&ab);
-
-    char buf[32];
-    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
-    abAppend(&ab, buf, strlen(buf));
-
-    abAppend(&ab, "\x1b[?25h", 6); // show cursor
-
-    write(STDOUT_FILENO, ab.b, ab.len);
-    abFree(&ab);
+    free(line);
+    fclose(fp);
 }
 
 // init
 void  initEditor() {
     E.cx = 0;
     E.cy = 0;
+    E.rx = 0;
+    E.rowoff = 0;
+    E.coloff = 0;
+    E.numrows = 0;
+    E.row = NULL;
+    E.filename = NULL;
+    E.statusmsg[0] = '\0';
+    E.statusmsg_time = 0;
+
     if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
+
+    E.screenrows -= 2;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     enableRawMode();
     initEditor();
+    if (argc >= 2) editorOpen(argv[1]);
+
+    editorSetStatusMessage("HELP: Ctrl-Q = quit");
 
     while (1) {
         editorRefreshScreen();

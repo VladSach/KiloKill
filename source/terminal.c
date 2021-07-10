@@ -62,7 +62,7 @@ int editorReadKey() {
                 switch (seq[1]) {
                     case 'A' : return ARROW_UP;
                     case 'B' : return ARROW_DOWN;
-                    case 'C' : return ARROW_UP;
+                    case 'C' : return ARROW_RIGHT;
                     case 'D' : return ARROW_LEFT;
                     case 'H': return HOME_KEY;
                     case 'F': return END_KEY;

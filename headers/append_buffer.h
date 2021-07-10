@@ -1,8 +1,6 @@
 #ifndef APPEND_BUFFER_H
 #define APPEND_BUFFER_H
 
-#include "includes.h"
-
 struct abuf {
     char *b;
     int len;
