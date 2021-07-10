@@ -32,7 +32,8 @@ int main(int argc, char *argv[]) {
     initEditor();
     if (argc >= 2) editorOpen(argv[1]);
 
-    editorSetStatusMessage("HELP: Crtl-S = save | Ctrl-Q = quit");
+    editorSetStatusMessage(
+        "HELP: Crtl-S = save | Ctrl-Q = quit | Ctrl-F = find");
 
     while (1) {
         editorRefreshScreen();
