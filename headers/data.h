@@ -4,10 +4,13 @@
 #include "includes.h"
 
 typedef struct erow {
+    int idx;
     int size;
     int rsize;
     char *chars;
     char *render;
+    unsigned char *hl;
+    int hl_open_comment;
 } erow;
 
 struct editorConfig {
@@ -24,6 +27,7 @@ struct editorConfig {
     char *filename;
     char statusmsg[80];
     time_t statusmsg_time;
+    struct editorSyntax *syntax;
     struct termios orig_termios;
 };
 
@@ -38,6 +42,17 @@ enum editorKey {
     END_KEY,
     PAGE_UP,
     PAGE_DOWN
+};
+
+enum editorHighlight {
+    HL_NORMAL = 0,
+    HL_COMMENT,
+    HL_MLCOMMENT,
+    HL_KEYWORD1,
+    HL_KEYWORD2,
+    HL_STRING,
+    HL_NUMBER,
+    HL_MATCH
 };
 
 #endif

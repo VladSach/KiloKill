@@ -3,10 +3,13 @@
 #include "file_io.h"
 #include "terminal.h"
 #include "row_operations.h"
+#include "syntax_highlighting.h"
 
 void editorOpen(char *filename) {
     free(E.filename);
     E.filename = strdup(filename);
+
+    editorSelectSyntaxHighlight();
 
     FILE *fp = fopen(filename, "r");
     if (!fp) die("fopen");
@@ -51,6 +54,7 @@ void editorSave() {
             editorSetStatusMessage("Save aborted");
             return;
         }
+        editorSelectSyntaxHighlight();
     }
 
     int len;
